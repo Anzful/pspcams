@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Control Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #2b2b2b; color: white; }
+        .container { max-width: 800px; margin: auto; padding: 20px; }
+        .btn { background-color: #1a73e8; padding: 10px; border: none; color: white; cursor: pointer; }
+        .btn:hover { background-color: #005bbb; }
+        .status { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; }
+        label { display: block; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="btn logout" onclick="window.location.href='/logout'">Log Out</button>
+        <h1>Camera Control Center</h1>
+
+        <button class="btn" id="dayBtn">Day Mode</button>
+        <button class="btn" id="nightBtn">Night Mode</button>
+        <button class="btn" onclick="window.location.href='/reports'">Reports</button>
+
+        <h3>Set Day/Night Profile Times</h3>
+        <label for="day_time">Day Start Time:</label>
+        <input type="time" id="day_time" value="{{ day_profile_time[0] if day_profile_time else '06:00' }}">
+
+        <label for="night_time">Night Start Time:</label>
+        <input type="time" id="night_time" value="{{ night_profile_time[0] if night_profile_time else '18:00' }}">
+
+        <button class="btn" id="setTimeBtn">Set Time Profile</button>
+        <div id="timeProfileStatus" style="display: inline-block; margin-left: 10px;">Loading...</div>
+
+        <h3>Add New Camera</h3>
+        <label for="camera_ip">Camera IP:</label>
+        <input type="text" id="camera_ip">
+        <button class="btn" id="addCameraBtn">Add Camera</button>
+
+        <div class="status">
+            <h4>Status</h4>
+            <p>Day Mode: <span id="dayStatus">{{ day_mode_count }} cameras</span></p>
+            <p>Night Mode: <span id="nightStatus">{{ night_mode_count }} cameras</span></p>
+
+    <button class="btn" id="refreshBtn">Refresh Status</button>
+
+
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('setTimeBtn').addEventListener('click', function() {
+            const dayTime = document.getElementById('day_time').value;
+            const nightTime = document.getElementById('night_time').value;
+
+            fetch('/set_time_profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `day_time=${dayTime}&night_time=${nightTime}`
+            }).then(response => response.json())
+              .then(data => {
+                  alert("Profile times set: " + JSON.stringify(data));
+              });
+        });
+
+        document.getElementById('dayBtn').addEventListener('click', function() {
+            fetch('/set_day_mode', { method: 'POST' }).then(response => response.json())
+                .then(data => alert(data.message));
+        });
+
+        document.getElementById('nightBtn').addEventListener('click', function() {
+            fetch('/set_night_mode', { method: 'POST' }).then(response => response.json())
+                .then(data => alert(data.message));
+        });
+
+document.getElementById('refreshBtn').addEventListener('click', function () {
+    // Fetch camera mode status
+    fetch('/get_camera_status')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('dayStatus').textContent = `${data.day_mode_count} cameras`;
+            document.getElementById('nightStatus').textContent = `${data.night_mode_count} cameras`;
+        })
+        .catch(error => console.error('Error refreshing camera status:', error));
+
+    // Fetch the latest time profile status
+    fetch('/get_time_profile')
+        .then(response => response.json())
+        .then(data => {
+            const timeProfileStatus = document.getElementById('timeProfileStatus');
+            timeProfileStatus.textContent = `Day Time: ${data.day_time} | Night Time: ${data.night_time}`;
+        })
+        .catch(error => console.error('Error refreshing time profile status:', error));
+});
+
+
+        document.getElementById('addCameraBtn').addEventListener('click', function() {
+    const ip = document.getElementById('camera_ip').value;
+    fetch('/add_camera', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `ip=${ip}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert(data.message);
+        } else {
+            alert(`Error: ${data.message}`);
+        }
+    });
+});
+
+    window.onload = function() {
+    fetch('/get_time_profile')
+        .then(response => response.json())
+        .then(data => {
+            const statusDiv = document.getElementById('timeProfileStatus');
+            statusDiv.textContent = `Day Time: ${data.day_time} | Night Time: ${data.night_time}`;
+        })
+        .catch(error => console.error('Error fetching time profile:', error));
+};
+    </script>
+</body>
+</html>
